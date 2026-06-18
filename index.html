@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oyola Transportes</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2b3340;
+    --txt:#e6edf3; --muted:#8b98a8; --accent:#f5a623; --accent2:#3fb950;
+    --blue:#58a6ff; --danger:#f85149;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.5;padding-bottom:60px}
+  header{background:linear-gradient(135deg,#1a2332,#0d1117);border-bottom:2px solid var(--accent);padding:22px 24px;display:flex;align-items:center;gap:16px}
+  header .logo{font-size:34px}
+  header h1{font-size:24px;letter-spacing:.5px}
+  header h1 span{color:var(--accent)}
+  header .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .tabs{display:flex;gap:4px;padding:14px 24px 0;background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .tab{background:var(--panel);border:1px solid var(--border);border-bottom:none;padding:10px 18px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--muted);font-size:14px;font-weight:600}
+  .tab.active{background:var(--panel2);color:var(--accent);border-color:var(--accent)}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+  .card h2{font-size:16px;margin-bottom:14px;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .card h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .field{margin-bottom:14px}
+  input[type=number]{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;color:var(--txt);font-size:15px}
+  input[type=number]:focus{outline:none;border-color:var(--accent)}
+  .inline{display:flex;gap:8px;align-items:center}
+  .inline input{flex:1}
+  .unit{color:var(--muted);font-size:13px;white-space:nowrap}
+  .result{background:linear-gradient(135deg,#1a2a1a,#161b22);border:1px solid var(--accent2);border-radius:12px;padding:24px;text-align:center}
+  .result .big{font-size:46px;font-weight:800;color:var(--accent2);letter-spacing:-1px}
+  .result .lbl{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:1px}
+  .breakdown{margin-top:18px;font-size:13px;color:var(--muted)}
+  .breakdown .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+  .breakdown .row span:last-child{color:var(--txt);font-weight:600}
+  .diesel-box{background:linear-gradient(135deg,#2a1f0a,#161b22);border:1px solid var(--accent)}
+  .diesel-box .big{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+  td:first-child,th:first-child{text-align:left}
+  tr.calib td{color:var(--muted)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+  .badge.ok{background:rgba(63,185,80,.15);color:var(--accent2)}
+  .badge.warn{background:rgba(245,166,35,.15);color:var(--accent)}
+  .badge.err{background:rgba(248,81,73,.15);color:var(--danger)}
+  .note{background:var(--panel2);border-left:3px solid var(--accent);padding:12px 14px;border-radius:6px;font-size:13px;color:var(--muted);margin-top:14px}
+  .note b{color:var(--txt)}
+  .params-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.params-grid{grid-template-columns:1fr}}
+  .hidden{display:none}
+  .section-divider{max-width:1100px;margin:34px auto 0;padding:0 24px;display:flex;align-items:center;gap:14px}
+  .section-divider::before,.section-divider::after{content:"";height:1px;background:var(--border);flex:1}
+  .section-divider span{color:var(--accent);font-size:15px;font-weight:700;letter-spacing:.5px;white-space:nowrap;background:var(--panel);border:1px solid var(--border);padding:7px 16px;border-radius:20px}
+  .formula{font-family:'Consolas',monospace;background:#0a0e14;border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--blue);overflow-x:auto;white-space:pre;line-height:1.7}
+  button{background:var(--accent);color:#0d1117;border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:14px}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .tag{font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 8px;border-radius:10px}
+
+  /* ====== Celular (iPhone etc.) ====== */
+  @media(max-width:560px){
+    body{padding-bottom:40px}
+    header{padding:16px 14px;gap:12px}
+    header .logo{font-size:30px}
+    header h1{font-size:21px}
+    header .sub{font-size:12px}
+    .tabs{padding:12px 12px 0;gap:8px}
+    .tab{flex:1;text-align:center;padding:11px 6px;font-size:13px;border:1px solid var(--border);border-radius:10px}
+    .tab.active{border-color:var(--accent)}
+    .wrap{padding:16px 12px}
+    .card{padding:16px;overflow-x:auto}
+    .card h2{font-size:15px}
+    .result{padding:20px 16px}
+    .result .big{font-size:33px;letter-spacing:-.5px}
+    input[type=number],select{font-size:16px}      /* 16px evita o zoom automático do iOS ao focar */
+    .section-divider{margin-top:24px;padding:0 12px}
+    .section-divider span{font-size:13px;padding:6px 12px;white-space:normal;text-align:center}
+    table{font-size:12px}
+    th,td{padding:7px 5px}
+    th{font-size:10px}
+    .formula{font-size:11px;padding:12px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🚛</div>
+  <div>
+    <h1>Oyola <span>Transportes</span></h1>
+    <div class="sub">Calculadora de tarifa de frete por fazenda · diesel-driven</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="floresta">🌲 Resultado de Floresta</div>
+  <div class="tab" data-tab="transporte">🚛 Tarifa de Transporte</div>
+</div>
+
+<!-- ============ ABA: RESULTADO DE FLORESTA (principal) ============ -->
+<div class="wrap view" id="view-floresta">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>🌲 Dados da floresta</h2>
+        <div class="field">
+          <label>Tonelagem total da floresta</label>
+          <div class="inline"><input type="number" id="flTon" value="0" step="1" min="0"><span class="unit">ton</span></div>
+        </div>
+        <div class="field">
+          <label>Preço por tonelada (receita)</label>
+          <div class="inline"><input type="number" id="flPreco" value="317.9" step="0.1" min="0"><span class="unit">R$/ton</span></div>
+        </div>
+        <h3>Custos</h3>
+        <div class="field">
+          <label>Tarifa de transporte (manual)</label>
+          <div class="inline"><input type="number" id="flTarifa" value="0" step="0.01" min="0"><span class="unit">R$/ton</span></div>
+        </div>
+        <div class="field">
+          <label>Custo da colheita</label>
+          <div class="inline"><input type="number" id="flColheita" value="60" step="1" min="0"><span class="unit">R$/ton</span></div>
+        </div>
+        <div class="field">
+          <label>Meses para cortar a floresta</label>
+          <div class="inline"><input type="number" id="flMeses" value="0" step="1" min="0"><span class="unit">meses</span></div>
+        </div>
+        <div class="field">
+          <label>Custo fixo por mês</label>
+          <div class="inline"><input type="number" id="flCustoFixoMes" value="135000" step="1000" min="0"><span class="unit">R$/mês</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="result" id="flResultBox">
+        <div class="lbl">Resultado (receita − custos)</div>
+        <div class="big" id="flResultOut">R$ 0,00</div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h2>📋 Demonstrativo</h2>
+        <div class="breakdown" id="flBreakdown"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ABA: TARIFA DE TRANSPORTE (3 seções roláveis) ============ -->
+<div class="view hidden" id="view-transporte">
+
+<!-- ============ SEÇÃO: TARIFA ============ -->
+<div class="section-divider"><span>📊 Tarifa de Transporte</span></div>
+<div class="wrap tab-content" id="tab-tarifa">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>🛣️ Dados do trajeto</h2>
+        <div class="field">
+          <label>Trajeto</label>
+          <select id="idaVolta" style="width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px;color:var(--txt);font-size:15px">
+            <option value="2" selected>Só ida — caminhão volta pelo mesmo caminho (×2)</option>
+            <option value="1">Já informei ida + volta somados (×1)</option>
+            <option value="diff">Volta por caminho DIFERENTE — informo ida e volta separados</option>
+          </select>
+        </div>
+
+        <div id="blocoIda">
+          <h3 id="lblIda">Quilometragem</h3>
+          <div class="field">
+            <label>Quilômetros de ASFALTO</label>
+            <div class="inline"><input type="number" id="kmAsf" value="0" step="1" min="0"><span class="unit">km</span></div>
+          </div>
+          <div class="field">
+            <label>Quilômetros de CHÃO (terra/cascalho)</label>
+            <div class="inline"><input type="number" id="kmChao" value="0" step="1" min="0"><span class="unit">km</span></div>
+          </div>
+        </div>
+
+        <div id="blocoVolta" class="hidden">
+          <h3>↩️ Trajeto da VOLTA</h3>
+          <div class="field">
+            <label>Quilômetros de ASFALTO (volta)</label>
+            <div class="inline"><input type="number" id="kmAsfV" value="0" step="1" min="0"><span class="unit">km</span></div>
+          </div>
+          <div class="field">
+            <label>Quilômetros de CHÃO (volta)</label>
+            <div class="inline"><input type="number" id="kmChaoV" value="0" step="1" min="0"><span class="unit">km</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card diesel-box">
+        <h2>⛽ Preço do diesel</h2>
+        <div class="field">
+          <label>Diesel atual (R$/litro) — a variável que mais pesa</label>
+          <div class="inline"><input type="number" id="diesel" value="6.75" step="0.01" min="0"><span class="unit">R$/L</span></div>
+        </div>
+        <div class="note">Quando o diesel mudar, é só atualizar aqui — a tarifa recalcula sozinha, proporcional ao novo preço. Referência de calibragem: <b>R$ 6,75</b>.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="result" id="resultBox">
+        <div class="lbl">Tarifa de transporte (R$ / tonelada)</div>
+        <div class="big" id="tarifaOut">R$ 0,00</div>
+        <div class="breakdown" id="breakdown"></div>
+      </div>
+      <div class="note" style="margin-top:20px">
+        ✅ <b>Fórmula calibrada</b> com Santo Antônio e Paraíso (erro máx. −3,2%). Asfalto R$ 0,25 e chão R$ 0,40 por ton·km.
+        Só falta travar o quanto da tarifa acompanha o diesel — me passe a tarifa nova no próximo reajuste do combustível.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SEÇÃO: CALIBRAGEM ============ -->
+<div class="section-divider"><span>🎯 Calibragem (Fazendas)</span></div>
+<div class="wrap tab-content" id="tab-calibragem">
+  <div class="card">
+    <h2>🎯 Parâmetros da fórmula (ajustáveis)</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Calibrado com Santo Antônio (2 trajetos) e validado no Paraíso. Os coeficientes são <b>por tonelada · por km rodado</b> (contando a direção percorrida).</p>
+    <div class="params-grid">
+      <div class="field">
+        <label>Custo ASFALTO (R$ / ton · km)</label>
+        <input type="number" id="pCoefAsf" value="0.25" step="0.01">
+      </div>
+      <div class="field">
+        <label>Custo CHÃO (R$ / ton · km) — pesa 1,6× o asfalto</label>
+        <input type="number" id="pCoefChao" value="0.40" step="0.01">
+      </div>
+      <div class="field">
+        <label>Diesel de referência (R$/L)</label>
+        <input type="number" id="pDieselRef" value="6.75" step="0.01">
+      </div>
+      <div class="field">
+        <label>% da tarifa indexada ao diesel <span class="tag">trava no próximo reajuste</span></label>
+        <input type="number" id="pSensDiesel" value="100" step="5">
+      </div>
+    </div>
+    <div class="note" style="margin-top:4px">
+      ⛽ <b>Sobre o diesel:</b> hoje a tarifa está 100% indexada ao diesel (sobe/desce na mesma proporção do preço).
+      Quando você me passar a <b>nova tarifa após um reajuste do diesel</b>, eu calculo o quanto da tarifa realmente acompanha o combustível e ajusto este número.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🚜 Fazendas — dados reais vs. calculado</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
+      Cole aqui os dados de cada fazenda. Quanto mais perto a tarifa <b>calculada</b> ficar da <b>real</b>, melhor está a calibragem.
+    </p>
+    <table id="calibTable">
+      <thead>
+        <tr>
+          <th>Fazenda</th>
+          <th>Km asfalto</th>
+          <th>Km chão</th>
+          <th>Tarifa REAL</th>
+          <th>Calculado</th>
+          <th>Erro</th>
+        </tr>
+      </thead>
+      <tbody id="calibBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ SEÇÃO: FORMULA ============ -->
+<div class="section-divider"><span>🧮 A Fórmula</span></div>
+<div class="wrap tab-content" id="tab-formula">
+  <div class="card">
+    <h2>🧮 Como a tarifa é calculada</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">
+      O modelo parte do <b>consumo de diesel</b>, porque é ele que manda no custo. Estrada de chão gasta mais combustível por km que asfalto, então cada km de chão "pesa" mais.
+    </p>
+    <div class="formula">km_asf, km_chão = quilômetros TOTAIS rodados (ida e volta)
+
+base = 0,25 × km_asf  +  0,40 × km_chão     (R$/ton @ diesel 6,75)
+
+fator_diesel = (1 − s) + s × (diesel ÷ 6,75)   (s = 100% hoje)
+
+TARIFA = base × fator_diesel</div>
+    <div class="note" style="margin-top:18px">
+      <b>Os coeficientes (calibrados nas suas fazendas):</b><br>
+      • Asfalto = <b>R$ 0,25</b> por tonelada a cada km rodado<br>
+      • Chão = <b>R$ 0,40</b> por tonelada a cada km rodado → o chão <b>pesa 1,6×</b> o asfalto (mais consumo, mais desgaste)<br><br>
+      <b>Ida e volta:</b> a tarifa cobre o caminhão indo carregado e voltando. Em "só ida" o sistema dobra os km automaticamente; no Paraíso, onde ida e volta passam por estradas diferentes, somei os dois trechos.<br><br>
+      <b>Diesel como variável-rei:</b> hoje a tarifa é <b>diretamente proporcional</b> ao diesel (s = 100%): subiu 10% no diesel → sobe ~10% a tarifa. Quando você me passar a tarifa nova depois de um reajuste do diesel, eu meço o quanto dela realmente acompanha o combustível e ajusto o <b>s</b>.
+    </div>
+  </div>
+  <div class="card">
+    <h2>✅ Conferência da calibragem</h2>
+    <table>
+      <thead><tr><th>Trajeto</th><th>Calculado</th><th>Real</th><th>Erro</th></tr></thead>
+      <tbody>
+        <tr><td>Santo Antônio → serraria</td><td>R$ 45,00</td><td>R$ 45,00</td><td><span class="badge ok">0,0%</span></td></tr>
+        <tr><td>Santo Antônio → destino 2</td><td>R$ 70,00</td><td>R$ 70,00</td><td><span class="badge ok">0,0%</span></td></tr>
+        <tr><td>Paraíso (ida+volta)</td><td>R$ 87,10</td><td>R$ 90,00</td><td><span class="badge ok">−3,2%</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /view-transporte -->
+
+<script>
+// ---------- Parâmetros (calibráveis) ----------
+function P(){
+  return {
+    coefAsf:   +document.getElementById('pCoefAsf').value,
+    coefChao:  +document.getElementById('pCoefChao').value,
+    dieselRef: +document.getElementById('pDieselRef').value,
+    sens:      +document.getElementById('pSensDiesel').value/100,
+  };
+}
+
+// ---------- Núcleo da fórmula ----------
+// kmAsf/kmChao = km TOTAIS rodados (já com ida/volta aplicado)
+function calcTarifa(kmAsf, kmChao, diesel, p){
+  const fatorDiesel = (1 - p.sens) + p.sens * (diesel / p.dieselRef);
+  const base   = p.coefAsf*kmAsf + p.coefChao*kmChao; // tarifa no diesel de referência
+  const custoAsf  = p.coefAsf*kmAsf  * fatorDiesel;
+  const custoChao = p.coefChao*kmChao * fatorDiesel;
+  const tarifa = base * fatorDiesel;
+  return {tarifa, base, fatorDiesel, custoAsf, custoChao};
+}
+
+function fmt(v){return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+// ---------- Render tarifa ----------
+function render(){
+  const modo = document.getElementById('idaVolta').value; // '1', '2' ou 'diff'
+  const kmAsf1 = +document.getElementById('kmAsf').value || 0;
+  const kmChao1 = +document.getElementById('kmChao').value || 0;
+  const diesel = +document.getElementById('diesel').value || 0;
+  const p = P();
+
+  // Mostra/esconde o bloco de volta e ajusta o rótulo da ida
+  const isDiff = modo === 'diff';
+  document.getElementById('blocoVolta').classList.toggle('hidden', !isDiff);
+  document.getElementById('lblIda').textContent = isDiff ? '➡️ Trajeto da IDA' : 'Quilometragem';
+
+  let kmAsf, kmChao, legenda;
+  if(isDiff){
+    const kmAsfV = +document.getElementById('kmAsfV').value || 0;
+    const kmChaoV = +document.getElementById('kmChaoV').value || 0;
+    kmAsf = kmAsf1 + kmAsfV;
+    kmChao = kmChao1 + kmChaoV;
+    legenda = 'ida + volta (caminhos diferentes)';
+  } else {
+    const f = +modo; // 1 ou 2
+    kmAsf = kmAsf1*f; kmChao = kmChao1*f;
+    legenda = f===2 ? 'ida e volta (mesmo caminho)' : 'totais informados';
+  }
+
+  const r = calcTarifa(kmAsf, kmChao, diesel, p);
+  document.getElementById('tarifaOut').textContent = fmt(r.tarifa);
+  document.getElementById('breakdown').innerHTML = `
+    <div class="row"><span>Km rodados (${legenda})</span><span>${(kmAsf+kmChao).toLocaleString('pt-BR')} km</span></div>
+    <div class="row"><span>Parcela asfalto (${kmAsf} km)</span><span>${fmt(r.custoAsf)}</span></div>
+    <div class="row"><span>Parcela chão (${kmChao} km)</span><span>${fmt(r.custoChao)}</span></div>
+    <div class="row"><span>Fator diesel @ R$ ${diesel.toFixed(2)}/L</span><span>×${r.fatorDiesel.toFixed(3)}</span></div>
+  `;
+  renderCalib();
+}
+
+// ---------- Calibragem ----------
+// km já em TOTAIS (ida e volta). obs descreve a origem do número.
+let FAZENDAS = [
+  {nome:'Santo Antônio → serraria',  kmAsf:20,  kmChao:100, tarifaReal:45, obs:'ida 10a+50c · ×2'},
+  {nome:'Santo Antônio → destino 2', kmAsf:120, kmChao:100, tarifaReal:70, obs:'ida 60a+50c · ×2'},
+  {nome:'Paraíso (ida+volta)',       kmAsf:150, kmChao:124, tarifaReal:90, obs:'ida 50a+80c · volta 100a+44c'},
+];
+
+function renderCalib(){
+  const body = document.getElementById('calibBody');
+  if(!body || !FAZENDAS.length){return;}
+  const diesel = +document.getElementById('diesel').value || P().dieselRef;
+  const p = P();
+  body.innerHTML = FAZENDAS.map(f=>{
+    const calc = calcTarifa(f.kmAsf, f.kmChao, diesel, p).tarifa;
+    const erro = f.tarifaReal ? (calc - f.tarifaReal)/f.tarifaReal*100 : 0;
+    const cls = Math.abs(erro)<5?'ok':Math.abs(erro)<12?'warn':'err';
+    return `<tr>
+      <td>${f.nome}<br><span class="tag">${f.obs}</span></td>
+      <td>${f.kmAsf}</td>
+      <td>${f.kmChao}</td>
+      <td>${f.tarifaReal?fmt(f.tarifaReal):'—'}</td>
+      <td>${fmt(calc)}</td>
+      <td><span class="badge ${cls}">${erro>0?'+':''}${erro.toFixed(1)}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- Resultado de Floresta ----------
+function renderFloresta(){
+  const ton     = +document.getElementById('flTon').value || 0;
+  const preco   = +document.getElementById('flPreco').value || 0;
+  const tarifa  = +document.getElementById('flTarifa').value || 0;
+  const colheita= +document.getElementById('flColheita').value || 0;
+  const meses   = +document.getElementById('flMeses').value || 0;
+  const custoFixoMes = +document.getElementById('flCustoFixoMes').value || 0;
+
+  const receita   = ton * preco;
+  const cTransp   = ton * tarifa;
+  const cColheita = ton * colheita;
+  const cFixo     = meses * custoFixoMes;
+  const custoTotal= cTransp + cColheita + cFixo;
+  const resultado = receita - custoTotal;
+  const margem = receita ? resultado/receita*100 : 0;
+
+  const out = document.getElementById('flResultOut');
+  out.textContent = fmt(resultado);
+  out.style.color = resultado >= 0 ? 'var(--accent2)' : 'var(--danger)';
+
+  document.getElementById('flBreakdown').innerHTML = `
+    <div class="row"><span>Receita total (${ton.toLocaleString('pt-BR')} ton × ${fmt(preco)})</span><span style="color:var(--accent2)">${fmt(receita)}</span></div>
+    <div class="row"><span>(−) Transporte (${ton.toLocaleString('pt-BR')} ton × ${fmt(tarifa)})</span><span style="color:var(--danger)">−${fmt(cTransp)}</span></div>
+    <div class="row"><span>(−) Colheita (${ton.toLocaleString('pt-BR')} ton × ${fmt(colheita)})</span><span style="color:var(--danger)">−${fmt(cColheita)}</span></div>
+    <div class="row"><span>(−) Custo fixo (${meses} ${meses===1?'mês':'meses'} × ${fmt(custoFixoMes)})</span><span style="color:var(--danger)">−${fmt(cFixo)}</span></div>
+    <div class="row"><span><b>Custo total</b></span><span><b>−${fmt(custoTotal)}</b></span></div>
+    <div class="row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:10px"><span><b>RESULTADO</b> (margem ${margem.toFixed(1)}%)</span><span style="font-weight:800;color:${resultado>=0?'var(--accent2)':'var(--danger)'}">${fmt(resultado)}</span></div>
+  `;
+}
+
+// ---------- Abas ----------
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+    document.getElementById('view-'+t.dataset.tab).classList.remove('hidden');
+  });
+});
+
+['flTon','flPreco','flTarifa','flColheita','flMeses','flCustoFixoMes'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',renderFloresta);
+});
+renderFloresta();
+
+// ---------- Eventos ----------
+['kmAsf','kmChao','kmAsfV','kmChaoV','idaVolta','diesel','pCoefAsf','pCoefChao','pDieselRef','pSensDiesel'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',render);
+  document.getElementById(id).addEventListener('change',render);
+});
+
+render();
+</script>
+</body>
+</html>
