@@ -230,7 +230,8 @@
         <div class="breakdown" id="breakdown"></div>
       </div>
       <div class="note" style="margin-top:20px">
-        ✅ <b>Fórmula calibrada</b> com Santo Antônio e Paraíso (erro máx. −3,2%). Asfalto R$ 0,25 e chão R$ 0,40 por ton·km.
+        ✅ <b>Fórmula calibrada</b> com Santo Antônio, Paraíso e Ribeirão (erro máx. −3,2%). Asfalto R$ 0,25 e chão R$ 0,40 por ton·km.
+        Trajeto <b>sem nenhum asfalto</b> usa o chão puro a R$ 0,49/ton·km (calibrado no Ribeirão).
         Só falta travar o quanto da tarifa acompanha o diesel — me passe a tarifa nova no próximo reajuste do combustível.
       </div>
     </div>
@@ -251,6 +252,10 @@
       <div class="field">
         <label>Custo CHÃO (R$ / ton · km) — pesa 1,6× o asfalto</label>
         <input type="number" id="pCoefChao" value="0.40" step="0.01">
+      </div>
+      <div class="field">
+        <label>Custo CHÃO PURO (R$ / ton · km) <span class="tag">trajeto sem asfalto</span></label>
+        <input type="number" id="pCoefChaoPuro" value="0.49" step="0.01">
       </div>
       <div class="field">
         <label>Diesel de referência (R$/L)</label>
@@ -300,13 +305,18 @@
 
 base = 0,25 × km_asf  +  0,40 × km_chão     (R$/ton @ diesel 6,75)
 
+  se km_asf = 0 (trajeto 100% chão):
+  base = 0,49 × km_chão
+
 fator_diesel = (1 − s) + s × (diesel ÷ 6,75)   (s = 100% hoje)
 
 TARIFA = base × fator_diesel</div>
     <div class="note" style="margin-top:18px">
       <b>Os coeficientes (calibrados nas suas fazendas):</b><br>
       • Asfalto = <b>R$ 0,25</b> por tonelada a cada km rodado<br>
-      • Chão = <b>R$ 0,40</b> por tonelada a cada km rodado → o chão <b>pesa 1,6×</b> o asfalto (mais consumo, mais desgaste)<br><br>
+      • Chão = <b>R$ 0,40</b> por tonelada a cada km rodado → o chão <b>pesa 1,6×</b> o asfalto (mais consumo, mais desgaste)<br>
+      • Chão <b>puro</b> (trajeto sem nenhum asfalto) = <b>R$ 0,49</b> por tonelada a cada km rodado → pesa <b>1,96×</b> o asfalto. Calibrado no Ribeirão (107 km de chão, ida, R$ 105/ton).<br><br>
+      <b>⚠️ Por que o chão puro tem coeficiente próprio:</b> o R$ 0,40 foi calibrado em trajetos que <b>misturam</b> asfalto e chão, e ele subestima em 18,5% um trajeto só de chão. O modelo não consegue acertar os dois com um coeficiente só — provavelmente falta um custo fixo por viagem (carga/descarga/tempo parado), que pesa mais quando não há asfalto para diluir. Enquanto o Ribeirão for a única referência de chão puro, essa é a melhor aproximação.<br><br>
       <b>Ida e volta:</b> a tarifa cobre o caminhão indo carregado e voltando. Em "só ida" o sistema dobra os km automaticamente; no Paraíso, onde ida e volta passam por estradas diferentes, somei os dois trechos.<br><br>
       <b>Diesel como variável-rei:</b> hoje a tarifa é <b>diretamente proporcional</b> ao diesel (s = 100%): subiu 10% no diesel → sobe ~10% a tarifa. Quando você me passar a tarifa nova depois de um reajuste do diesel, eu meço o quanto dela realmente acompanha o combustível e ajusto o <b>s</b>.
     </div>
@@ -330,22 +340,27 @@ TARIFA = base × fator_diesel</div>
 // ---------- Parâmetros (calibráveis) ----------
 function P(){
   return {
-    coefAsf:   +document.getElementById('pCoefAsf').value,
-    coefChao:  +document.getElementById('pCoefChao').value,
-    dieselRef: +document.getElementById('pDieselRef').value,
-    sens:      +document.getElementById('pSensDiesel').value/100,
+    coefAsf:      +document.getElementById('pCoefAsf').value,
+    coefChao:     +document.getElementById('pCoefChao').value,
+    coefChaoPuro: +document.getElementById('pCoefChaoPuro').value,
+    dieselRef:    +document.getElementById('pDieselRef').value,
+    sens:         +document.getElementById('pSensDiesel').value/100,
   };
 }
 
 // ---------- Núcleo da fórmula ----------
 // kmAsf/kmChao = km TOTAIS rodados (já com ida/volta aplicado)
+// Trajeto 100% chão usa o coeficiente próprio (calibrado no Ribeirão): o chão
+// puro custa mais por km que o chão de um trajeto misto.
 function calcTarifa(kmAsf, kmChao, diesel, p){
+  const chaoPuro = kmAsf === 0 && kmChao > 0;
+  const cChao = chaoPuro ? p.coefChaoPuro : p.coefChao;
   const fatorDiesel = (1 - p.sens) + p.sens * (diesel / p.dieselRef);
-  const base   = p.coefAsf*kmAsf + p.coefChao*kmChao; // tarifa no diesel de referência
-  const custoAsf  = p.coefAsf*kmAsf  * fatorDiesel;
-  const custoChao = p.coefChao*kmChao * fatorDiesel;
+  const base   = p.coefAsf*kmAsf + cChao*kmChao; // tarifa no diesel de referência
+  const custoAsf  = p.coefAsf*kmAsf * fatorDiesel;
+  const custoChao = cChao*kmChao    * fatorDiesel;
   const tarifa = base * fatorDiesel;
-  return {tarifa, base, fatorDiesel, custoAsf, custoChao};
+  return {tarifa, base, fatorDiesel, custoAsf, custoChao, chaoPuro, cChao};
 }
 
 function fmt(v){return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -381,7 +396,7 @@ function render(){
   document.getElementById('breakdown').innerHTML = `
     <div class="row"><span>Km rodados (${legenda})</span><span>${(kmAsf+kmChao).toLocaleString('pt-BR')} km</span></div>
     <div class="row"><span>Parcela asfalto (${kmAsf} km)</span><span>${fmt(r.custoAsf)}</span></div>
-    <div class="row"><span>Parcela chão (${kmChao} km)</span><span>${fmt(r.custoChao)}</span></div>
+    <div class="row"><span>Parcela chão (${kmChao} km @ R$ ${r.cChao.toFixed(2)}/ton·km)${r.chaoPuro?' <span class="tag">chão puro</span>':''}</span><span>${fmt(r.custoChao)}</span></div>
     <div class="row"><span>Fator diesel @ R$ ${diesel.toFixed(2)}/L</span><span>×${r.fatorDiesel.toFixed(3)}</span></div>
   `;
   renderCalib();
@@ -393,6 +408,7 @@ let FAZENDAS = [
   {nome:'Santo Antônio → serraria',  kmAsf:20,  kmChao:100, tarifaReal:45, obs:'ida 10a+50c · ×2'},
   {nome:'Santo Antônio → destino 2', kmAsf:120, kmChao:100, tarifaReal:70, obs:'ida 60a+50c · ×2'},
   {nome:'Paraíso (ida+volta)',       kmAsf:150, kmChao:124, tarifaReal:90, obs:'ida 50a+80c · volta 100a+44c'},
+  {nome:'Ribeirão',                  kmAsf:0,   kmChao:214, tarifaReal:105, obs:'ida 107c (só chão) · ×2'},
 ];
 
 function renderCalib(){
@@ -565,7 +581,7 @@ document.querySelectorAll('.tab').forEach(t=>{
 renderFloresta();
 
 // ---------- Eventos ----------
-['kmAsf','kmChao','kmAsfV','kmChaoV','idaVolta','diesel','pCoefAsf','pCoefChao','pDieselRef','pSensDiesel'].forEach(id=>{
+['kmAsf','kmChao','kmAsfV','kmChaoV','idaVolta','diesel','pCoefAsf','pCoefChao','pCoefChaoPuro','pDieselRef','pSensDiesel'].forEach(id=>{
   document.getElementById(id).addEventListener('input',render);
   document.getElementById(id).addEventListener('change',render);
 });
