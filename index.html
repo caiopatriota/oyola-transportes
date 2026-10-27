@@ -71,6 +71,18 @@
   button.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
   .tag{font-size:11px;color:var(--muted);background:var(--panel2);padding:2px 8px;border-radius:10px}
 
+  .ck-in{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;color:var(--txt);font-size:15px}
+  .ck-in:focus{outline:none;border-color:var(--accent)}
+  .ck-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .ck-item{padding:12px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+  .ck-item .ck-main{flex:1;min-width:0;font-size:13px;color:var(--muted)}
+  .ck-item .ck-main b{color:var(--txt);font-size:15px}
+  .ck-fotos{display:flex;flex-wrap:wrap;gap:10px}
+  .ck-fotos a{position:relative;display:block}
+  .ck-fotos img{width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .ck-fotos .ck-fdel{position:absolute;top:4px;right:4px;padding:2px 7px;font-size:12px;background:var(--danger);color:#fff}
+  @media(max-width:560px){.ck-in{font-size:16px}}
+
   /* ====== Celular (iPhone etc.) ====== */
   @media(max-width:560px){
     body{padding-bottom:40px}
@@ -108,6 +120,7 @@
 <div class="tabs">
   <div class="tab active" data-tab="floresta">🌲 Resultado de Floresta</div>
   <div class="tab" data-tab="transporte">🚛 Tarifa de Transporte</div>
+  <div class="tab" data-tab="carregamentos">📝 Carregamentos</div>
 </div>
 
 <!-- ============ ABA: RESULTADO DE FLORESTA (principal) ============ -->
@@ -328,6 +341,54 @@ TARIFA = base × fator_diesel</div>
 </div>
 
 </div><!-- /view-transporte -->
+
+<!-- ============ ABA: FICHA DE CARREGAMENTO ============ -->
+<div class="wrap view hidden" id="view-carregamentos">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>📝 Novo carregamento</h2>
+        <div class="ck-grid">
+          <div class="field"><label>Data</label><input class="ck-in" type="date" id="ckData"></div>
+          <div class="field"><label>Placa</label><input class="ck-in" type="text" id="ckPlaca" placeholder="ABC1D23" autocapitalize="characters"></div>
+        </div>
+        <div class="field"><label>Motorista</label><input class="ck-in" type="text" id="ckMotorista"></div>
+        <div class="field"><label>Responsável / fornecedor</label><input class="ck-in" type="text" id="ckResp" placeholder="ex.: Jarison, Oyola"></div>
+        <div class="ck-grid">
+          <div class="field"><label>Medida</label>
+            <select class="ck-in" id="ckMedida">
+              <option>Tonelada</option>
+              <option>Metro pg</option>
+              <option>Metro</option>
+            </select>
+          </div>
+          <div class="field"><label>Quantidade (opcional)</label><input class="ck-in" type="number" id="ckQtd" step="0.01"></div>
+        </div>
+        <div class="field"><label>Observação</label><input class="ck-in" type="text" id="ckObs"></div>
+        <button id="ckSalvar" style="width:100%">➕ Lançar carregamento</button>
+      </div>
+      <div class="card">
+        <h2>📷 Fotos da ficha</h2>
+        <div class="ck-fotos" id="ckFotos"></div>
+        <button class="ghost" id="ckFotoBtn" style="width:100%;margin-top:14px">📷 Enviar foto da ficha</button>
+        <input type="file" id="ckFotoFile" accept="image/*" class="hidden">
+        <div class="note">A foto fica guardada <b>neste aparelho</b> (reduzida para caber). Toque na miniatura para ver em tamanho cheio.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>🗂️ Carregamentos lançados <span class="tag" id="ckTotal"></span></h2>
+        <div id="ckLista"></div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="ghost" id="ckExportar" style="flex:1;font-size:13px">⬇️ Exportar</button>
+          <button class="ghost" id="ckImportar" style="flex:1;font-size:13px">⬆️ Importar</button>
+          <input type="file" id="ckImportFile" accept="application/json,.json" class="hidden">
+        </div>
+        <div class="note">Os lançamentos ficam salvos neste aparelho. Use <b>Exportar</b> para levar para outro celular ou guardar backup.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ---------- Parâmetros (calibráveis) ----------
@@ -551,6 +612,127 @@ document.getElementById('flImportFile').addEventListener('change', function(){
   this.value = '';
 });
 renderSalvos();
+
+// ---------- Ficha de carregamento ----------
+const CK_KEY = 'oyola_carregamentos';
+const CK_FOTOS_KEY = 'oyola_fichas_fotos';
+// Lançamentos da ficha em papel (foto de 26/10/2026)
+const CK_INICIAIS = [
+  {id:'f1', data:'2026-10-26', placa:'BEU5I20', motorista:'Joan', resp:'Jarison', medida:'Tonelada', qtd:'', obs:'Ficha em papel'},
+  {id:'f2', data:'2026-10-26', placa:'UCF3G63', motorista:'João Lucas', resp:'Oyola', medida:'Metro pg', qtd:'', obs:'Ficha em papel'},
+];
+const CK_FOTOS_INICIAIS = [{id:'p1', src:'fichas/ficha-carregamento-2026-10-26.jpg', nome:'Ficha 26/10/2026', fixa:true}];
+
+function ckLerJSON(k, padrao){
+  try{ const v = localStorage.getItem(k); return v===null ? padrao : JSON.parse(v); }catch(e){ return padrao; }
+}
+function ckGravarJSON(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch(e){ alert('Não foi possível salvar (memória do navegador cheia?).'); return false; }
+}
+function ckLer(){ return ckLerJSON(CK_KEY, CK_INICIAIS); }
+function ckFotosLer(){ return ckLerJSON(CK_FOTOS_KEY, CK_FOTOS_INICIAIS); }
+function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function dataBR(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? m[3]+'/'+m[2]+'/'+m[1] : (iso||'—'); }
+
+function ckRender(){
+  const arr = ckLer().slice().sort((a,b)=> (b.data||'').localeCompare(a.data||''));
+  document.getElementById('ckTotal').textContent = arr.length + (arr.length===1?' lançamento':' lançamentos');
+  const box = document.getElementById('ckLista');
+  if(!arr.length){ box.innerHTML = '<p style="color:var(--muted);font-size:13px">Nenhum carregamento lançado.</p>'; }
+  else box.innerHTML = arr.map(r=>`<div class="ck-item">
+      <div class="ck-main">
+        <b>${esc(r.placa)||'—'}</b> · ${esc(dataBR(r.data))}<br>
+        🧑‍✈️ ${esc(r.motorista)||'—'} · 👤 ${esc(r.resp)||'—'}<br>
+        📏 ${r.qtd!==''&&r.qtd!=null ? esc((+r.qtd).toLocaleString('pt-BR'))+' ' : ''}${esc(r.medida)}${r.obs?' · '+esc(r.obs):''}
+      </div>
+      <button class="ghost ck-del" data-id="${esc(r.id)}" style="padding:7px 12px;font-size:13px;color:var(--danger);border-color:var(--danger)">✕</button>
+    </div>`).join('');
+  box.querySelectorAll('.ck-del').forEach(b=> b.addEventListener('click',()=>{
+    if(!confirm('Excluir este carregamento?')) return;
+    ckGravarJSON(CK_KEY, ckLer().filter(x=> x.id !== b.dataset.id)); ckRender();
+  }));
+
+  const fotos = ckFotosLer();
+  const fb = document.getElementById('ckFotos');
+  fb.innerHTML = fotos.length ? fotos.map(f=>`<a href="${esc(f.src)}" target="_blank" title="${esc(f.nome)}">
+      <img src="${esc(f.src)}" alt="${esc(f.nome)}">
+      ${f.fixa?'':`<button class="ck-fdel" data-id="${esc(f.id)}">✕</button>`}
+    </a>`).join('') : '<p style="color:var(--muted);font-size:13px">Nenhuma foto enviada.</p>';
+  fb.querySelectorAll('.ck-fdel').forEach(b=> b.addEventListener('click',e=>{
+    e.preventDefault();
+    if(!confirm('Excluir esta foto?')) return;
+    ckGravarJSON(CK_FOTOS_KEY, ckFotosLer().filter(x=> x.id !== b.dataset.id)); ckRender();
+  }));
+}
+
+function ckSalvar(){
+  const v = id=> document.getElementById(id).value.trim();
+  const reg = {id:'c'+Date.now(), data:v('ckData'), placa:v('ckPlaca').toUpperCase().replace(/[\s.\-]/g,''),
+    motorista:v('ckMotorista'), resp:v('ckResp'), medida:v('ckMedida'), qtd:v('ckQtd'), obs:v('ckObs')};
+  if(!reg.placa && !reg.motorista){ alert('Informe ao menos a placa ou o motorista.'); return; }
+  const arr = ckLer(); arr.push(reg);
+  if(!ckGravarJSON(CK_KEY, arr)) return;
+  ['ckPlaca','ckMotorista','ckResp','ckQtd','ckObs'].forEach(id=> document.getElementById(id).value='');
+  ckRender();
+}
+
+// Reduz a foto (lado maior 1400px, JPEG) para caber no armazenamento do navegador
+function ckFotoAdicionar(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const max = 1400, k = Math.min(1, max/Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const fotos = ckFotosLer();
+      fotos.push({id:'p'+Date.now(), src:c.toDataURL('image/jpeg', 0.7), nome:'Ficha '+new Date().toLocaleDateString('pt-BR')});
+      if(ckGravarJSON(CK_FOTOS_KEY, fotos)) ckRender();
+    };
+    img.onerror = ()=> alert('Não consegui abrir essa imagem.');
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function ckExportar(){
+  const blob = new Blob([JSON.stringify({carregamentos:ckLer(), fotos:ckFotosLer().filter(f=>!f.fixa)}, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'oyola-carregamentos-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function ckImportar(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let d; try{ d = JSON.parse(reader.result); }catch(e){ alert('Arquivo inválido.'); return; }
+    const novos = Array.isArray(d) ? d : (d && d.carregamentos) || [];
+    const arr = ckLer(); let add = 0;
+    novos.forEach(r=>{ if(r && r.id && !arr.some(x=>x.id===r.id)){ arr.push(r); add++; } });
+    ckGravarJSON(CK_KEY, arr);
+    if(d && Array.isArray(d.fotos)){
+      const fotos = ckFotosLer();
+      d.fotos.forEach(f=>{ if(f && f.id && !fotos.some(x=>x.id===f.id)) fotos.push(f); });
+      ckGravarJSON(CK_FOTOS_KEY, fotos);
+    }
+    ckRender();
+    alert('Importação concluída: '+add+' carregamento(s) novo(s).');
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('ckData').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+document.getElementById('ckSalvar').addEventListener('click', ckSalvar);
+document.getElementById('ckFotoBtn').addEventListener('click', ()=> document.getElementById('ckFotoFile').click());
+document.getElementById('ckFotoFile').addEventListener('change', function(){ if(this.files && this.files[0]) ckFotoAdicionar(this.files[0]); this.value=''; });
+document.getElementById('ckExportar').addEventListener('click', ckExportar);
+document.getElementById('ckImportar').addEventListener('click', ()=> document.getElementById('ckImportFile').click());
+document.getElementById('ckImportFile').addEventListener('change', function(){ if(this.files && this.files[0]) ckImportar(this.files[0]); this.value=''; });
+ckRender();
 
 // ---------- Abas ----------
 document.querySelectorAll('.tab').forEach(t=>{
